@@ -22,4 +22,4 @@ done
 export SUPERRES_METHOD
 
 # Now launch the Python inference code (pass along any remaining arguments)
-python predict.py "$@"
+python3 predict.py "$@"
