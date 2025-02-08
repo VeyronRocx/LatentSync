@@ -1,10 +1,98 @@
-# LatentSync: Audio Conditioned Latent Diffusion Models for Lip Sync
+# LatentSync Superresolution Patch
 
-<div align="center">
+This repository is a modified version of [LatentSync](https://github.com/bytedance/LatentSync) that adds an extra step to enhance the generated (lipsynced) subframes using superresolution models (GFPGAN and/or CodeFormer). The patch compares the resolution of the generated subframe with the original frame and, if needed, automatically upscales it using the specified superresolution method(s).
 
-[![arXiv](https://img.shields.io/badge/arXiv_paper-2412.09262-b31b1b)](https://arxiv.org/abs/2412.09262)
-[![arXiv](https://img.shields.io/badge/%F0%9F%A4%97%20space-HuggingFace-yellow)](https://huggingface.co/spaces/fffiloni/LatentSync)
-<a href="https://replicate.com/lucataco/latentsync"><img src="https://replicate.com/lucataco/latentsync/badge" alt="Replicate"></a>
+## Features
+
+- **Conditional Superresolution:** Applies GFPGAN and/or CodeFormer only to the generated subframe when its resolution is lower than the corresponding region in the original frame.
+- **Flexible Superres Options:** Pass a parameter (`--superres`) to choose `GFPGAN`, `CodeFormer`, or both (e.g. `GFPGAN,CodeFormer`).
+- **Cog Predictor Interface:** The project is set up as a Cog predictor so that it can be deployed on platforms that support Cog.
+- **Standalone Running Option:** For macOS users where the Cog CLI may not be available, you can run the predictor as a standalone Python script.
+
+## Requirements
+
+- **Python 3.9+** (or your preferred Python 3 version)
+- **Required Python Packages:**  
+  - `cog` (if using Cog; otherwise not required for standalone execution)
+  - `opencv-python`
+  - Other dependencies as required by the original LatentSync project
+- **Additional Tools:**  
+  - `pget` (for downloading model weights)  
+  - *Optional:* Docker (if you wish to run Cog inside a container)
+
+## Repository Structure
+
+LatentSync-patch-2/ ├── checkpoints/ # Pre-trained model weights and auxiliary files ├── configs/ # Configuration files (e.g. second_stage.yaml) ├── scripts/ │ └── inference # Inference script used by the predictor ├── predict.py # Cog predictor interface (with superres integration) ├── inference.sh # Launcher shell script that sets the SUPERRES_METHOD env variable └── README.md # This file
+
+Install Dependencies:
+It is recommended to use a virtual environment:
+python3 -m venv venv
+source venv/bin/activate
+Then install the required packages:
+pip install -r requirements.txt
+If you plan to use the Cog CLI (on supported systems), also install Cog:
+pip install cog
+Ensure Auxiliary Tools are Installed:
+Make sure you have pget installed in your PATH (used for downloading model weights). If not, install it or modify download_weights accordingly.
+How to Run the Code
+
+There are two main options to run the project:
+
+Option 1: Run as a Standalone Python Script
+You can run the predictor directly without using Cog.
+
+Edit predict.py (if necessary):
+Ensure the bottom of your predict.py includes a main block similar to:
+if __name__ == "__main__":
+    from pathlib import Path
+
+    predictor = Predictor()
+    predictor.setup()
+
+    # Provide your video file (MP4 with audio)
+    video_path = Path("/path/to/your/video.mp4")
+    audio_path = Path("/path/to/your/video.mp4")  # Same file if no separate audio
+
+    guidance_scale = 1.0
+    seed = 0  # 0 to auto-generate a seed
+
+    output = predictor.predict(
+        video=video_path,
+        audio=audio_path,
+        guidance_scale=guidance_scale,
+        seed=seed
+    )
+    print("Output video saved at:", output)
+Set the Superresolution Method:
+Before running, set the environment variable for the superresolution method. For example:
+export SUPERRES_METHOD="GFPGAN,CodeFormer"
+Run the Predictor:
+python3 predict.py
+
+Option 2: Run via Docker with Cog (if preferred)
+If you wish to use the Cog interface and your system supports Docker, you can run Cog inside a container.
+
+Install Docker Desktop from Docker's website.
+Create a Dockerfile in the repository (if not already provided):
+FROM python:3.9-slim
+
+# Install dependencies
+RUN pip install cog opencv-python
+
+# Copy your project files
+COPY . /app
+WORKDIR /app
+
+# Set default command to run the predictor
+CMD ["cog", "predict"]
+
+Build the Docker Image:
+docker build -t latentsync-cog .
+Run the Container:
+Mount your local project folder into the container and supply your video file:
+docker run --rm -v /path/to/your/video.mp4:/app/your_video.mp4 latentsync-cog --video=@/app/your_video.mp4 --audio=@/app/your_video.mp4 --guidance_scale=1.0 --seed=0 --superres=GFPGAN,CodeFormer
+
+
 
 </div>
 
